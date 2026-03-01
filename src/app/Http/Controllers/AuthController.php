@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    // Регистрация
+    // рег
     public function register(Request $request)
     {
         $request->validate([
@@ -28,7 +28,7 @@ class AuthController extends Controller
         return response()->json(['token' => $token, 'user' => $user], 201);
     }
 
-    // Вход
+    // вход
     public function login(Request $request)
     {
         $request->validate([
@@ -45,14 +45,14 @@ class AuthController extends Controller
         return response()->json(['token' => $token]);
     }
 
-    // Выход
+    // выход
     public function logout()
     {
         auth('api')->logout();
         return response()->json(['message' => 'Выход выполнен']);
     }
 
-    // Текущий пользователь
+    // текующий юзер
     public function me()
     {
         return response()->json(auth('api')->user());

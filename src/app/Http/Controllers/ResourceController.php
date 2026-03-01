@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 
 class ResourceController extends Controller
 {
-    // GET /api/resources — все залы (доступно всем)
+    // GET /api/resources всем доступно будет
     public function index()
     {
         return response()->json(Resource::where('is_active', true)->get());
@@ -18,7 +18,7 @@ class ResourceController extends Controller
         return response()->json($resource);
     }
 
-    // POST /api/resources — только admin
+    // POST /api/resources только администратору
     public function store(Request $request)
     {
         $request->validate([
@@ -35,7 +35,7 @@ class ResourceController extends Controller
         return response()->json($resource, 201);
     }
 
-    // PUT /api/resources/{id} — только admin
+    // PUT /api/resources/{id} только админ
     public function update(Request $request, Resource $resource)
     {
         $request->validate([
@@ -53,7 +53,7 @@ class ResourceController extends Controller
         return response()->json($resource);
     }
 
-    // DELETE /api/resources/{id} — только admin
+    // DELETE /api/resources/{id} только админу
     public function destroy(Resource $resource)
     {
         $resource->delete();

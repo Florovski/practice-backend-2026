@@ -10,7 +10,7 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->string('type'); // например: 'gym', 'yoga', 'pool', 'court'
+            $table->string('type');
             $table->integer('capacity');
             $table->integer('floor')->default(1);
             $table->decimal('price_per_hour', 8, 2);
