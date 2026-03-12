@@ -6,19 +6,60 @@ use Illuminate\Http\Request;
 
 class ResourceController extends Controller
 {
-    // GET /api/resources всем доступно будет
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Resource::where('is_active', true)->get());
+        $query = Resource::where('is_active', true)
+            ->withAvg('reviews', 'rating');
+
+        // по типу
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // по минимальной вместимости
+        if ($request->filled('capacity')) {
+            $query->where('capacity', '>=', $request->capacity);
+        }
+
+        // по этажу
+        if ($request->filled('floor')) {
+            $query->where('floor', $request->floor);
+        }
+
+        // по максимальной цене
+        if ($request->filled('max_price')) {
+            $query->where('price_per_hour', '<=', $request->max_price);
+        }
+
+        // поиск свободных на конкретное время
+        if ($request->filled('date') && $request->filled('start_time') && $request->filled('end_time')) {
+            $query->whereDoesntHave('bookings', function ($q) use ($request) {
+                $q->where('date', $request->date)
+                  ->where('status', 'active')
+                  ->where('start_time', '<', $request->end_time)
+                  ->where('end_time', '>', $request->start_time);
+            });
+        }
+
+        // сортировка
+        $sortBy  = in_array($request->get('sort_by'), ['price_per_hour', 'capacity']) 
+                   ? $request->get('sort_by') : 'id';
+        $sortDir = $request->get('sort_dir', 'asc') === 'desc' ? 'desc' : 'asc';
+        $query->orderBy($sortBy, $sortDir);
+
+        // пагинация
+        $perPage = min((int) $request->get('per_page', 10), 50);
+        $resources = $query->paginate($perPage);
+
+        return response()->json($resources);
     }
 
-    // GET /api/resources/{id}
     public function show(Resource $resource)
     {
+        $resource->loadAvg('reviews', 'rating');
         return response()->json($resource);
     }
 
-    // POST /api/resources только администратору
     public function store(Request $request)
     {
         $request->validate([
@@ -31,11 +72,9 @@ class ResourceController extends Controller
         ]);
 
         $resource = Resource::create($request->all());
-
         return response()->json($resource, 201);
     }
 
-    // PUT /api/resources/{id} только админ
     public function update(Request $request, Resource $resource)
     {
         $request->validate([
@@ -49,11 +88,9 @@ class ResourceController extends Controller
         ]);
 
         $resource->update($request->all());
-
         return response()->json($resource);
     }
 
-    // DELETE /api/resources/{id} только админу
     public function destroy(Resource $resource)
     {
         $resource->delete();

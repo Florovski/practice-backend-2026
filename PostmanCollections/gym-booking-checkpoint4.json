@@ -1,0 +1,544 @@
+{
+  "info": {
+    "name": "Gym Booking — Checkpoint 4",
+    "_postman_id": "gym-booking-checkpoint4-final",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Логин (admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.token) pm.collectionVariables.set('admin_token', d.token);",
+              "pm.test('Логин admin успешен', function() { pm.response.to.have.status(200); });",
+              "pm.test('Токен получен', function() { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@gym.com\",\n  \"password\": \"password\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/auth/login",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "0. Логин (user)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.token) pm.collectionVariables.set('user_token', d.token);",
+              "pm.test('Логин user успешен', function() { pm.response.to.have.status(200); });",
+              "pm.test('Токен получен', function() { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"user@gym.com\",\n  \"password\": \"password\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/auth/login",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "1. Все залы (без фильтров, пагинация)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Есть пагинация', function() { pm.expect(d).to.have.property('current_page'); });",
+              "pm.test('Есть данные', function() { pm.expect(d.data).to.be.an('array').that.is.not.empty; });",
+              "pm.test('per_page = 5', function() { pm.expect(d.per_page).to.eql(5); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?per_page=5",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [{ "key": "per_page", "value": "5" }]
+        }
+      }
+    },
+    {
+      "name": "2. Фильтр по типу (gym)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Все залы типа gym', function() {",
+              "  d.data.forEach(function(r) { pm.expect(r.type).to.eql('gym'); });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?type=gym",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [{ "key": "type", "value": "gym" }]
+        }
+      }
+    },
+    {
+      "name": "3. Фильтр по вместимости (>=10)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Вместимость >= 10', function() {",
+              "  d.data.forEach(function(r) { pm.expect(r.capacity).to.be.at.least(10); });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?capacity=10",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [{ "key": "capacity", "value": "10" }]
+        }
+      }
+    },
+    {
+      "name": "4. Фильтр по максимальной цене (<=500)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Цена <= 500', function() {",
+              "  d.data.forEach(function(r) { pm.expect(parseFloat(r.price_per_hour)).to.be.at.most(500); });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?max_price=500",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [{ "key": "max_price", "value": "500" }]
+        }
+      }
+    },
+    {
+      "name": "5. Поиск свободных залов (2026-03-20 13:00-15:00)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Есть свободные залы', function() { pm.expect(d.data).to.be.an('array').that.is.not.empty; });",
+              "pm.test('Есть пагинация', function() { pm.expect(d).to.have.property('current_page'); });",
+              "pm.test('Total > 0', function() { pm.expect(d.total).to.be.above(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?date=2026-03-20&start_time=13:00&end_time=15:00",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [
+            { "key": "date", "value": "2026-03-20" },
+            { "key": "start_time", "value": "13:00" },
+            { "key": "end_time", "value": "15:00" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Поиск — пустой результат (gym занят из сидера)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Пустой результат', function() { pm.expect(d.data).to.be.an('array').that.is.empty; });",
+              "pm.test('Total = 0', function() { pm.expect(d.total).to.eql(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?date=2026-03-13&start_time=10:00&end_time=12:00&type=gym",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [
+            { "key": "date", "value": "2026-03-13" },
+            { "key": "start_time", "value": "10:00" },
+            { "key": "end_time", "value": "12:00" },
+            { "key": "type", "value": "gym" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Сортировка по цене (дешевле сначала)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Сортировка по возрастанию цены', function() {",
+              "  var prices = d.data.map(function(r) { return parseFloat(r.price_per_hour); });",
+              "  for (var i = 1; i < prices.length; i++) {",
+              "    pm.expect(prices[i]).to.be.at.least(prices[i-1]);",
+              "  }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources?sort_by=price_per_hour&sort_dir=asc",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources"],
+          "query": [
+            { "key": "sort_by", "value": "price_per_hour" },
+            { "key": "sort_dir", "value": "asc" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Расписание зала на день",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Есть поле schedule', function() { pm.expect(d).to.have.property('schedule'); });",
+              "pm.test('Schedule - массив', function() { pm.expect(d.schedule).to.be.an('array'); });",
+              "pm.test('Есть бронирования', function() { pm.expect(d.schedule.length).to.be.above(0); });",
+              "pm.test('Period = day', function() { pm.expect(d.period).to.eql('day'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources/1/schedule?date=2026-03-13&period=day",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources", "1", "schedule"],
+          "query": [
+            { "key": "date", "value": "2026-03-13" },
+            { "key": "period", "value": "day" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Расписание зала на неделю",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Есть поле schedule', function() { pm.expect(d).to.have.property('schedule'); });",
+              "pm.test('Period = week', function() { pm.expect(d.period).to.eql('week'); });",
+              "pm.test('Есть from', function() { pm.expect(d).to.have.property('from'); });",
+              "pm.test('Есть to', function() { pm.expect(d).to.have.property('to'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources/1/schedule?date=2026-03-13&period=week",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources", "1", "schedule"],
+          "query": [
+            { "key": "date", "value": "2026-03-13" },
+            { "key": "period", "value": "week" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Отзывы о зале (средний рейтинг)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "pm.test('Есть average_rating', function() { pm.expect(d).to.have.property('average_rating'); });",
+              "pm.test('Есть список отзывов', function() { pm.expect(d).to.have.property('reviews'); });",
+              "pm.test('Рейтинг от 1 до 5', function() {",
+              "  if (d.average_rating !== null) {",
+              "    pm.expect(parseFloat(d.average_rating)).to.be.within(1, 5);",
+              "  }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources/1/reviews",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources", "1", "reviews"]
+        }
+      }
+    },
+    {
+      "name": "11. Подготовка — установить past_booking_id из сидера",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 200', function() { pm.response.to.have.status(200); });",
+              "var pastBooking = null;",
+              "if (d.data) {",
+              "  pastBooking = d.data.find(function(b) {",
+              "    return b.resource_id === 3 && new Date(b.date) < new Date();",
+              "  });",
+              "}",
+              "if (pastBooking) {",
+              "  pm.collectionVariables.set('past_booking_id', pastBooking.id);",
+              "  pm.test('past_booking_id найден: ' + pastBooking.id, function() {",
+              "    pm.expect(pastBooking.id).to.be.above(0);",
+              "  });",
+              "} else {",
+              "  pm.test('ОШИБКА: прошлое бронирование не найдено', function() { pm.expect(false).to.be.true; });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{user_token}}" }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/bookings?per_page=50",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "bookings"],
+          "query": [{ "key": "per_page", "value": "50" }]
+        }
+      }
+    },
+    {
+      "name": "12. Добавить отзыв (завершённое бронирование)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 201', function() { pm.response.to.have.status(201); });",
+              "pm.test('Отзыв создан', function() { pm.expect(d).to.have.property('review'); });",
+              "pm.test('Средний рейтинг в ответе', function() { pm.expect(d).to.have.property('average_rating'); });",
+              "pm.test('Рейтинг = 5', function() { pm.expect(d.review.rating).to.eql(5); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{user_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"booking_id\": {{past_booking_id}},\n  \"rating\": 5,\n  \"comment\": \"Отличный бассейн, всё чисто!\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources/3/reviews",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources", "3", "reviews"]
+        }
+      }
+    },
+    {
+      "name": "13. Отзыв на незавершённое бронирование (ожидаем 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 422', function() { pm.response.to.have.status(422); });",
+              "pm.test('Есть сообщение об ошибке', function() { pm.expect(d).to.have.property('message'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{user_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"booking_id\": 1,\n  \"rating\": 4,\n  \"comment\": \"Ещё не закончилось\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources/1/reviews",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources", "1", "reviews"]
+        }
+      }
+    },
+    {
+      "name": "14. Повторный отзыв (ожидаем 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Статус 422', function() { pm.response.to.have.status(422); });",
+              "pm.test('Есть сообщение об ошибке', function() { pm.expect(d).to.have.property('message'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{user_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"booking_id\": {{past_booking_id}},\n  \"rating\": 3,\n  \"comment\": \"Второй раз\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/resources/3/reviews",
+          "protocol": "http",
+          "host": ["127.0.0.1"],
+          "port": "8000",
+          "path": ["api", "resources", "3", "reviews"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "admin_token", "value": "" },
+    { "key": "user_token", "value": "" },
+    { "key": "past_booking_id", "value": "" }
+  ]
+}

@@ -7,17 +7,20 @@ use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
-    // юзер свои видит, админ все
-    public function index()
+    public function index(Request $request)
     {
-        $user = auth('api')->user();
+        $user    = auth('api')->user();
+        $perPage = min((int) $request->get('per_page', 10), 50);
 
         if ($user->isAdmin()) {
-            $bookings = Booking::with(['user', 'resource'])->get();
+            $bookings = Booking::with(['user', 'resource'])
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
         } else {
             $bookings = Booking::with(['resource'])
                 ->where('user_id', $user->id)
-                ->get();
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
         }
 
         return response()->json($bookings);
@@ -34,13 +37,11 @@ class BookingController extends Controller
 
         $user = auth('api')->user();
 
-        // проверка пересечений
         $conflict = Booking::where('resource_id', $request->resource_id)
             ->where('date', $request->date)
             ->where('status', 'active')
             ->where(function ($query) use ($request) {
                 $query->where(function ($q) use ($request) {
-                    // новое начало попадает внутрь существующего
                     $q->where('start_time', '<', $request->end_time)
                       ->where('end_time', '>', $request->start_time);
                 });
@@ -59,7 +60,7 @@ class BookingController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Этот зал уже забронирован на выбранное время.',
+                'message'  => 'Этот зал уже забронирован на выбранное время.',
                 'conflict' => [
                     'date'       => $conflict->date,
                     'start_time' => $conflict->start_time,
@@ -94,7 +95,6 @@ class BookingController extends Controller
         $user    = auth('api')->user();
         $booking = Booking::findOrFail($id);
 
-        // юзер только своё отменяет
         if (!$user->isAdmin() && $booking->user_id !== $user->id) {
             Log::warning('Попытка отменить чужое бронирование', [
                 'initiator_id' => $user->id,
@@ -108,7 +108,6 @@ class BookingController extends Controller
             ], 403);
         }
 
-        // отмена уже отмененного (низя)
         if ($booking->status === 'cancelled') {
             return response()->json([
                 'message' => 'Бронирование уже отменено.',
