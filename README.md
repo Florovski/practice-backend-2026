@@ -60,7 +60,7 @@ erDiagram
       string name
       string email UNIQUE
       string password
-      enum role "admin|user"
+      string role
     }
 
     RESOURCES {
@@ -81,7 +81,7 @@ erDiagram
       date date
       time start_time
       time end_time
-      enum status "active|cancelled"
+      string status
     }
 
     REVIEWS {
@@ -93,6 +93,8 @@ erDiagram
       text comment
     }
 ```
+
+Ограничения полей по БД: `users.role` = `admin|user`, `bookings.status` = `active|cancelled`.
 
 Миграции:
 
