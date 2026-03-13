@@ -1,0 +1,68 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gym-booking-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: GymBookingAPI
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      APP_KEY: base64:q1dhWD+FEYwwo4xVdnK/6VngIRuWGkTxWhL4PtUAsEk=
+      JWT_SECRET: d5a1497e9796deef5ad6f6eb76310e065cdbf0e8228582a9ef72c19016472bc7
+      LOG_CHANNEL: stack
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: gym_booking
+      DB_USERNAME: gym_user
+      DB_PASSWORD: gym_pass
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    container_name: gym-booking-db
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: gym_booking
+      MYSQL_USER: gym_user
+      MYSQL_PASSWORD: gym_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} --silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  swagger:
+    image: swaggerapi/swagger-ui:latest
+    container_name: gym-booking-swagger
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      SWAGGER_JSON: /tmp/openapi.yaml
+    volumes:
+      - ./src/openapi.yaml:/tmp/openapi.yaml:ro
+    depends_on:
+      - app
+
+volumes:
+  db_data:

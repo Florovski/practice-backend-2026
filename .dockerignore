@@ -1,0 +1,17 @@
+.git
+.gitignore
+.idea
+.vscode
+node_modules
+vendor
+
+src/node_modules
+src/vendor
+src/storage/logs/*
+src/storage/framework/cache/*
+src/storage/framework/sessions/*
+src/storage/framework/views/*
+src/bootstrap/cache/*
+
+PostmanCollections
+projects

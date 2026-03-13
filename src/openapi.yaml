@@ -1,0 +1,1021 @@
+openapi: 3.0.3
+info:
+  title: Gym Booking API
+  version: 1.0.0
+  description: |
+    API для бронирования ресурсов спортклуба.
+
+    Основные возможности:
+    - JWT авторизация
+    - CRUD ресурсов (только админ)
+    - Бронирования с проверкой пересечения по времени
+    - Расписание ресурсов
+    - Отзывы и рейтинг
+servers:
+  - url: http://localhost:8000/api
+    description: Local docker environment
+tags:
+  - name: Auth
+  - name: Resources
+  - name: Bookings
+  - name: Reviews
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: Ivan Ivanov
+              email: ivan@example.com
+              password: secret123
+      responses:
+        '201':
+          description: Пользователь зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход в систему
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@gym.com
+              password: password
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Выход из системы
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Успешный выход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Выход выполнен
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Текущий пользователь
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Информация о текущем пользователе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /resources:
+    get:
+      tags: [Resources]
+      summary: Список активных ресурсов
+      description: Поддерживает фильтрацию, сортировку, пагинацию и поиск свободных ресурсов по времени.
+      parameters:
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - in: query
+          name: type
+          schema:
+            type: string
+          example: gym
+        - in: query
+          name: capacity
+          schema:
+            type: integer
+            minimum: 1
+          example: 10
+        - in: query
+          name: floor
+          schema:
+            type: integer
+            minimum: 1
+          example: 2
+        - in: query
+          name: max_price
+          schema:
+            type: number
+            format: float
+          example: 500
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          example: '2026-03-20'
+        - in: query
+          name: start_time
+          schema:
+            type: string
+            pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '10:00'
+        - in: query
+          name: end_time
+          schema:
+            type: string
+            pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '12:00'
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [id, price_per_hour, capacity]
+            default: id
+        - in: query
+          name: sort_dir
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Пагинированный список ресурсов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourcePagination'
+    post:
+      tags: [Resources]
+      summary: Создать ресурс (только admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceCreateRequest'
+            example:
+              name: Premium Hall
+              type: gym
+              capacity: 30
+              floor: 1
+              price_per_hour: 900
+              description: Large training zone
+      responses:
+        '201':
+          description: Ресурс создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /resources/{resource}:
+    get:
+      tags: [Resources]
+      summary: Получить ресурс по ID
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Ресурс найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      tags: [Resources]
+      summary: Обновить ресурс (только admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceUpdateRequest'
+      responses:
+        '200':
+          description: Ресурс обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Resources]
+      summary: Удалить ресурс (только admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Ресурс удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Зал удалён
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /resources/{resource}/schedule:
+    get:
+      tags: [Resources]
+      summary: Расписание ресурса
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+          example: '2026-03-20'
+        - in: query
+          name: period
+          required: false
+          schema:
+            type: string
+            enum: [day, week]
+            default: day
+      responses:
+        '200':
+          description: Расписание на период
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /resources/{resource}/reviews:
+    get:
+      tags: [Reviews]
+      summary: Отзывы о ресурсе
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Список отзывов с пагинацией и средним рейтингом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewsListResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    post:
+      tags: [Reviews]
+      summary: Оставить отзыв (после завершенного бронирования)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+            example:
+              booking_id: 7
+              rating: 5
+              comment: Отличный зал
+      responses:
+        '201':
+          description: Отзыв добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewCreateResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          description: Ошибка валидации или бизнес-ограничений
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/MessageOnlyError'
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: Список бронирований текущего пользователя (или всех для admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Пагинированный список бронирований
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingPagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags: [Bookings]
+      summary: Создать бронирование
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreateRequest'
+            example:
+              resource_id: 1
+              date: '2026-03-20'
+              start_time: '10:00'
+              end_time: '11:00'
+      responses:
+        '201':
+          description: Бронирование создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          description: Ошибка валидации или пересечение с существующим бронированием
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/BookingConflictError'
+
+  /bookings/{id}:
+    delete:
+      tags: [Bookings]
+      summary: Отменить бронирование
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: Бронирование отменено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Бронирование успешно отменено.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          description: Уже отменено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ResourceId:
+      in: path
+      name: resource
+      required: true
+      schema:
+        type: integer
+      example: 1
+    BookingId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+      example: 10
+
+  responses:
+    UnauthorizedError:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageOnlyError'
+          example:
+            message: Unauthorized
+    ForbiddenError:
+      description: Доступ запрещен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageOnlyError'
+          example:
+            message: Доступ запрещён. Только для администратора.
+    NotFoundError:
+      description: Сущность не найдена
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageOnlyError'
+          example:
+            message: Not Found
+    ValidationError:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RegisterResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+        user:
+          $ref: '#/components/schemas/User'
+
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 2
+        name:
+          type: string
+          example: Ivan Ivanov
+        email:
+          type: string
+          format: email
+          example: user@gym.com
+        role:
+          type: string
+          enum: [admin, user]
+          example: user
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Resource:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Тренажёрный зал
+        description:
+          type: string
+          nullable: true
+          example: Полный набор тренажёров
+        type:
+          type: string
+          example: gym
+        capacity:
+          type: integer
+          example: 20
+        floor:
+          type: integer
+          example: 1
+        price_per_hour:
+          type: number
+          format: float
+          example: 500
+        is_active:
+          type: boolean
+          example: true
+        reviews_avg_rating:
+          type: number
+          format: float
+          nullable: true
+          example: 4.2
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ResourceCreateRequest:
+      type: object
+      required: [name, type, capacity, floor, price_per_hour]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        floor:
+          type: integer
+          minimum: 1
+        price_per_hour:
+          type: number
+          format: float
+          minimum: 0
+        description:
+          type: string
+          nullable: true
+
+    ResourceUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        floor:
+          type: integer
+          minimum: 1
+        price_per_hour:
+          type: number
+          format: float
+          minimum: 0
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    ResourcePagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resource'
+        first_page_url:
+          type: string
+          nullable: true
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        last_page_url:
+          type: string
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+        path:
+          type: string
+        per_page:
+          type: integer
+        prev_page_url:
+          type: string
+          nullable: true
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 11
+        user_id:
+          type: integer
+          example: 2
+        resource_id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date
+          example: '2026-03-20'
+        start_time:
+          type: string
+          example: '10:00:00'
+        end_time:
+          type: string
+          example: '11:00:00'
+        status:
+          type: string
+          enum: [active, cancelled]
+          example: active
+        resource:
+          $ref: '#/components/schemas/Resource'
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BookingCreateRequest:
+      type: object
+      required: [resource_id, date, start_time, end_time]
+      properties:
+        resource_id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date
+          example: '2026-03-20'
+        start_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '10:00'
+        end_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '11:00'
+
+    BookingPagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+        first_page_url:
+          type: string
+          nullable: true
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        last_page_url:
+          type: string
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+        path:
+          type: string
+        per_page:
+          type: integer
+        prev_page_url:
+          type: string
+          nullable: true
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+    BookingConflictError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Этот зал уже забронирован на выбранное время.
+        conflict:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+              example: '2026-03-20'
+            start_time:
+              type: string
+              example: '10:00:00'
+            end_time:
+              type: string
+              example: '12:00:00'
+
+    ScheduleItem:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          example: '10:00:00'
+        end_time:
+          type: string
+          example: '12:00:00'
+        booked_by:
+          type: string
+          example: Ivan Ivanov
+
+    ScheduleResponse:
+      type: object
+      properties:
+        resource:
+          type: string
+          example: Тренажёрный зал
+        period:
+          type: string
+          enum: [day, week]
+          example: day
+        from:
+          type: string
+          format: date
+          example: '2026-03-20'
+        to:
+          type: string
+          format: date
+          example: '2026-03-20'
+        schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleItem'
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 2
+        booking_id:
+          type: integer
+          example: 7
+        resource_id:
+          type: integer
+          example: 1
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          nullable: true
+          example: Отличный зал
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ReviewCreateRequest:
+      type: object
+      required: [booking_id, rating]
+      properties:
+        booking_id:
+          type: integer
+          example: 7
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          maxLength: 1000
+          nullable: true
+          example: Отличный зал
+
+    ReviewCreateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Отзыв успешно добавлен.
+        review:
+          $ref: '#/components/schemas/Review'
+        average_rating:
+          type: number
+          format: float
+          example: 4.5
+
+    ReviewsListResponse:
+      type: object
+      properties:
+        average_rating:
+          type: number
+          format: float
+          nullable: true
+          example: 4.2
+        reviews:
+          type: object
+          properties:
+            current_page:
+              type: integer
+            data:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/Review'
+                  - type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+            first_page_url:
+              type: string
+              nullable: true
+            from:
+              type: integer
+              nullable: true
+            last_page:
+              type: integer
+            last_page_url:
+              type: string
+            links:
+              type: array
+              items:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    nullable: true
+                  label:
+                    type: string
+                  active:
+                    type: boolean
+            next_page_url:
+              type: string
+              nullable: true
+            path:
+              type: string
+            per_page:
+              type: integer
+            prev_page_url:
+              type: string
+              nullable: true
+            to:
+              type: integer
+              nullable: true
+            total:
+              type: integer
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required: [message, errors]
+
+    MessageOnlyError:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
