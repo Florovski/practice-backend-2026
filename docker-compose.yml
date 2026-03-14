@@ -6,24 +6,24 @@ services:
     container_name: gym-booking-app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
     environment:
-      APP_NAME: GymBookingAPI
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://localhost:8000
-      APP_KEY: base64:q1dhWD+FEYwwo4xVdnK/6VngIRuWGkTxWhL4PtUAsEk=
-      JWT_SECRET: d5a1497e9796deef5ad6f6eb76310e065cdbf0e8228582a9ef72c19016472bc7
-      LOG_CHANNEL: stack
-      DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: gym_booking
-      DB_USERNAME: gym_user
-      DB_PASSWORD: gym_pass
-      CACHE_STORE: file
-      SESSION_DRIVER: file
-      QUEUE_CONNECTION: sync
+      APP_NAME: ${APP_NAME:-GymBookingAPI}
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      APP_KEY: ${APP_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-gym_booking}
+      DB_USERNAME: ${DB_USERNAME:-gym_user}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in root .env}
+      CACHE_STORE: ${CACHE_STORE:-file}
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
     depends_on:
       db:
         condition: service_healthy
@@ -33,12 +33,12 @@ services:
     container_name: gym-booking-db
     restart: unless-stopped
     ports:
-      - "3307:3306"
+      - "${DB_PORT_EXTERNAL:-3307}:3306"
     environment:
-      MYSQL_DATABASE: gym_booking
-      MYSQL_USER: gym_user
-      MYSQL_PASSWORD: gym_pass
-      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: ${DB_DATABASE:-gym_booking}
+      MYSQL_USER: ${DB_USERNAME:-gym_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in root .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in root .env}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -56,7 +56,7 @@ services:
     container_name: gym-booking-swagger
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "${SWAGGER_PORT:-8081}:8080"
     environment:
       SWAGGER_JSON: /tmp/openapi.yaml
     volumes:

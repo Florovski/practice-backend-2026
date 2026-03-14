@@ -1,6 +1,6 @@
 # Gym Booking API checkpoint 1-5
 
-REST API для бронирования ресурсов (залы, площадки) с JWT авторизацией, ролями, проверкой пересечения времени, расписанием и отзывами.
+Booking API для бронирования ресурсов (залы, площадки) с JWT авторизацией, ролями, проверкой пересечения времени, расписанием и отзывами.
 
 ---
 
@@ -191,7 +191,7 @@ REST API для бронирования ресурсов (залы, площа�
 
 Сделано:
 
-- автотесты критичных сценариев (6 ключевых);
+- автотесты критичных сценариев, включая schedule/review flow;
 - OpenAPI спецификация;
 - Dockerfile + docker-compose (app + db + swagger);
 - запуск проекта одной командой.
@@ -199,10 +199,30 @@ REST API для бронирования ресурсов (залы, площа�
 Артефакты:
 
 - `src/tests/Feature/CriticalApiTest.php`
+- `src/tests/Feature/ScheduleReviewFlowTest.php`
 - `src/openapi.yaml`
 - `Dockerfile`
 - `docker-compose.yml`
 - `docker/app/entrypoint.sh`
+
+#### Отдельно по замечанию: тесты schedule/review flow
+
+Добавлено в автотесты (`src/tests/Feature/ScheduleReviewFlowTest.php`):
+
+- расписание ресурса на день (`GET /api/resources/{id}/schedule?date=...&period=day`);
+- успешный отзыв после завершённого бронирования;
+- запрет отзыва до завершения бронирования;
+- запрет дублирующего отзыва на одно бронирование.
+
+#### Отдельно по замечанию: вынос секретов из docker-compose.yml
+
+Сделано:
+
+- секреты удалены из `docker-compose.yml`, используются переменные окружения (`.env`/runtime env);
+- добавлен корневой шаблон `.env.example` для docker запуска;
+- добавлен корневой `.gitignore` с исключением `.env`;
+- `APP_KEY` и `JWT_SECRET` могут не храниться в репозитории и генерируются в runtime (в `entrypoint`) при пустых значениях;
+- `DB_PASSWORD` и `MYSQL_ROOT_PASSWORD` задаются в `.env` перед запуском.
 
 ---
 
@@ -218,8 +238,22 @@ REST API для бронирования ресурсов (залы, площа�
 ```bash
 git clone <URL_РЕПОЗИТОРИЯ>
 cd practice-backend-2026
+cp .env.example .env
 docker compose up --build
 ```
+
+PowerShell вариант:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+После копирования открой `.env` и задай минимум:
+
+- `DB_PASSWORD`
+- `MYSQL_ROOT_PASSWORD`
+
+`APP_KEY` и `JWT_SECRET` можно оставить пустыми: они сгенерируются автоматически при старте контейнера `app`.
 
 Если старая версия compose:
 
@@ -233,6 +267,7 @@ docker-compose up --build
 - поднимется приложение;
 - выполнятся миграции и сиды;
 - поднимется Swagger UI.
+- docker секреты и пароли берутся из корневого `.env`, а не из `docker-compose.yml`.
 
 Проверка:
 
@@ -310,6 +345,8 @@ docker compose exec app php artisan test
 - создание бронирования;
 - пересечение интервалов;
 - доступ по ролям.
+- flow расписания ресурса (schedule day);
+- flow отзывов: успешный отзыв, запрет отзыва до завершения, запрет дубликата.
 
 ---
 
@@ -326,7 +363,7 @@ docker compose exec app php artisan test
 
 ---
 
-## 12. Демо для сдачи
+## 12. Демо
 
 1. Клонирование репозитория
 2. `docker compose up --build`
